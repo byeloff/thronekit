@@ -18,7 +18,7 @@ use function Laravel\Prompts\warning;
 class InstallCommand extends Command
 {
     protected $signature = 'thronekit:install
-                            {--modules= : Comma-separated list of modules to install (compliance,notifications)}
+                            {--modules= : Comma-separated list of modules to install (compliance,notifications,fingerprint)}
                             {--skip-npm : Skip npm package installation}
                             {--skip-migrate : Skip database migrations}';
 
@@ -51,6 +51,13 @@ class InstallCommand extends Command
             note('Installing Notifications module (WebSocket + Admin CRUD)...');
             $this->installNotifications($files);
             $this->line('  ✓ Notifications installed');
+            $this->line('');
+        }
+
+        if (in_array('fingerprint', $selectedModules, true)) {
+            note('Installing Fingerprint module (trust scoring + bot protection)...');
+            $this->installFingerprint($files);
+            $this->line('  ✓ Fingerprint installed');
             $this->line('');
         }
 
@@ -102,8 +109,9 @@ class InstallCommand extends Command
         return multiselect(
             label: 'Which optional modules would you like to install?',
             options: [
-                'compliance'     => '🔒 Compliance  — LGPD/GDPR: cookie consent, terms, data export & anonymization',
-                'notifications'  => '🔔 Notifications — WebSocket real-time + admin CRUD + emoji composer',
+                'compliance'    => '🔒 Compliance    — LGPD/GDPR: cookie consent, terms, data export & anonymization',
+                'notifications' => '🔔 Notifications  — WebSocket real-time + admin CRUD + emoji composer',
+                'fingerprint'   => '🛡️  Fingerprint   — Trust scoring + bot protection + rate limiting',
             ],
             hint: 'Space to select, Enter to confirm. You can always add modules later.',
         );
@@ -185,6 +193,65 @@ class InstallCommand extends Command
     }
 
     /* ──────────────────────────────────────────────────────────────────────── */
+    /*  Fingerprint module                                                       */
+    /* ──────────────────────────────────────────────────────────────────────── */
+
+    private function installFingerprint(Filesystem $files): void
+    {
+        $stubs = $this->stubsPath('fingerprint');
+
+        $this->copyStubTree($files, $stubs . '/app',       base_path('app'));
+        $this->copyStubTree($files, $stubs . '/resources', base_path('resources'));
+        $this->copyStubTree($files, $stubs . '/tests',     base_path('tests'));
+
+        // Alias no bootstrap/app.php
+        $this->patchBootstrapApp(
+            "'fingerprint' => \\App\\Http\\Middleware\\FingerprintMiddleware::class,",
+            '// [thronekit:fingerprint-middleware]',
+        );
+
+        // Import em resources/js/app.tsx
+        $this->patchTextFile(
+            base_path('resources/js/app.tsx'),
+            "// [thronekit:fingerprint-import]\n",
+            "import { initFingerprint } from '@/fingerprint';\n",
+        );
+
+        // Chamada de inicialização em resources/js/app.tsx
+        $this->patchTextFile(
+            base_path('resources/js/app.tsx'),
+            '    // [thronekit:fingerprint-init]',
+            '    initFingerprint();',
+        );
+
+        // Singleton no AppServiceProvider::register()
+        $this->patchTextFile(
+            base_path('app/Providers/AppServiceProvider.php'),
+            '        // [thronekit:fingerprint-singleton]',
+            '        $this->app->singleton(\App\Services\Support\FingerprintService::class);',
+        );
+
+        // Rate limiter no AppServiceProvider::configureRateLimiters()
+        $limiterCode = <<<'PHP'
+        // Rotas sensíveis com fingerprint: 60 req/min em prod, 300 em local/testing.
+        RateLimiter::for('fingerprinted', function (Request $request): Limit {
+            $key = (string) ($request->attributes->get('fingerprint_key') ?? $request->ip());
+            $limit = app()->isProduction() ? 60 : 300;
+
+            return Limit::perMinute($limit)->by($key.'|'.$request->ip());
+        });
+
+        // [thronekit:fingerprint-limiter]
+PHP;
+
+        $this->patchTextFile(
+            base_path('app/Providers/AppServiceProvider.php'),
+            '        // [thronekit:fingerprint-limiter]',
+            $limiterCode,
+        );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────── */
     /*  Dependency management                                                    */
     /* ──────────────────────────────────────────────────────────────────────── */
 
@@ -222,6 +289,10 @@ class InstallCommand extends Command
             $packages[] = '@radix-ui/react-radio-group';
             $packages[] = '@radix-ui/react-checkbox';
             $packages[] = '@radix-ui/react-scroll-area';
+        }
+
+        if (in_array('fingerprint', $modules, true)) {
+            $packages[] = '@fingerprintjs/fingerprintjs';
         }
 
         $manager = $this->detectNodePackageManager();
@@ -291,6 +362,17 @@ class InstallCommand extends Command
     private function appendToFile(string $path, string $content): void
     {
         file_put_contents($path, PHP_EOL . $content, FILE_APPEND);
+    }
+
+    private function patchTextFile(string $path, string $anchor, string $replacement): void
+    {
+        $content = file_get_contents($path);
+
+        if (! str_contains($content, $anchor)) {
+            return;
+        }
+
+        file_put_contents($path, str_replace($anchor, $replacement, $content));
     }
 
     private function patchBootstrapApp(string $line, string $anchor): void

@@ -23,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // [thronekit:fingerprint-singleton]
     }
 
     /**
@@ -42,6 +42,8 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiters(): void
     {
+        // [thronekit:fingerprint-limiter]
+
         // Exportação de dados pessoais: pesada (ZIP + email) → 3 por hora por usuário.
         RateLimiter::for('privacy-export', fn (Request $request) => Limit::perHour(3)
             ->by($request->user()?->id ?: $request->ip())
