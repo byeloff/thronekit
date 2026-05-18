@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Dev\ThemeEditorController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PrivacyPolicyController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,14 @@ Route::middleware(['auth', 'verified', 'role:superadmin'])
     });
 
 require __DIR__.'/settings.php';
+
+// Ferramentas de desenvolvimento — disponíveis apenas em ambiente local.
+if (app()->environment('local')) {
+    Route::prefix('dev')->name('dev.')->group(function (): void {
+        Route::get('theme-editor', [ThemeEditorController::class, 'index'])->name('theme-editor');
+        Route::post('theme-editor', [ThemeEditorController::class, 'update'])->name('theme-editor.update');
+    });
+}
 
 // [thronekit:compliance-routes]
 // [thronekit:notifications-routes]
