@@ -2,3 +2,16 @@
 /node_modules/
 .DS_Store
 *.log
+
+# Never commit credentials
+.env
+.env.*
+!.env.example
+
+# Editor dirs
+.idea/
+.vscode/
+*.swp
+
+# OS
+Thumbs.db
