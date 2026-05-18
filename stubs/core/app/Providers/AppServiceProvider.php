@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureRateLimiters();
         $this->registerEventSubscribers();
+        $this->configureInertiaErrors();
+        // [thronekit:pennant-boot-call]
     }
 
     /**
@@ -59,6 +63,21 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::subscribe(AuthActivitySubscriber::class);
     }
+
+    protected function configureInertiaErrors(): void
+    {
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $response): mixed {
+            if (in_array($response->statusCode(), [403, 404, 419, 429, 500, 503])) {
+                return $response
+                    ->render('errors/error-page', ['status' => $response->statusCode()])
+                    ->withSharedData();
+            }
+
+            return null;
+        });
+    }
+
+    // [thronekit:pennant-methods]
 
     /**
      * Configure default behaviors for production-ready applications.

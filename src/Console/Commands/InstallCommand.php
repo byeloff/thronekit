@@ -18,7 +18,7 @@ use function Laravel\Prompts\warning;
 class InstallCommand extends Command
 {
     protected $signature = 'thronekit:install
-                            {--modules= : Comma-separated list of modules to install (compliance,notifications,fingerprint)}
+                            {--modules= : Comma-separated list of modules to install (compliance,notifications,fingerprint,pennant)}
                             {--skip-npm : Skip npm package installation}
                             {--skip-migrate : Skip database migrations}';
 
@@ -58,6 +58,13 @@ class InstallCommand extends Command
             note('Installing Fingerprint module (trust scoring + bot protection)...');
             $this->installFingerprint($files);
             $this->line('  ✓ Fingerprint installed');
+            $this->line('');
+        }
+
+        if (in_array('pennant', $selectedModules, true)) {
+            note('Installing Pennant module (feature flags)...');
+            $this->installPennant($files);
+            $this->line('  ✓ Pennant installed');
             $this->line('');
         }
 
@@ -112,6 +119,7 @@ class InstallCommand extends Command
                 'compliance'    => '🔒 Compliance    — LGPD/GDPR: cookie consent, terms, data export & anonymization',
                 'notifications' => '🔔 Notifications  — WebSocket real-time + admin CRUD + emoji composer',
                 'fingerprint'   => '🛡️  Fingerprint   — Trust scoring + bot protection + rate limiting',
+                'pennant'       => '🚩 Pennant        — Feature flags with Inertia-shared state + useFeature() hook',
             ],
             hint: 'Space to select, Enter to confirm. You can always add modules later.',
         );
@@ -252,6 +260,73 @@ PHP;
     }
 
     /* ──────────────────────────────────────────────────────────────────────── */
+    /*  Pennant module                                                           */
+    /* ──────────────────────────────────────────────────────────────────────── */
+
+    private function installPennant(Filesystem $files): void
+    {
+        $stubs = $this->stubsPath('pennant');
+
+        $this->copyStubTree($files, $stubs . '/app',       base_path('app'));
+        $this->copyStubTree($files, $stubs . '/resources', base_path('resources'));
+
+        // Publish Pennant config + migrations
+        $this->call('vendor:publish', [
+            '--provider' => 'Laravel\Pennant\PennantServiceProvider',
+            '--no-interaction' => true,
+        ]);
+
+        // features prop em HandleInertiaRequests::share()
+        $featuresCode = <<<'PHP'
+            'features' => \Inertia\Inertia::optional(function () use ($request): array {
+                if (! $request->user()) {
+                    return [];
+                }
+
+                return collect(\App\Enums\FeatureFlag::cases())
+                    ->mapWithKeys(fn (\App\Enums\FeatureFlag $flag) => [
+                        $flag->value => \Laravel\Pennant\Feature::for($request->user())->active($flag->value),
+                    ])
+                    ->all();
+            }),
+PHP;
+
+        $this->patchTextFile(
+            base_path('app/Http/Middleware/HandleInertiaRequests.php'),
+            '            // [thronekit:pennant-features]',
+            $featuresCode,
+        );
+
+        // Chamada no boot() do AppServiceProvider
+        $this->patchTextFile(
+            base_path('app/Providers/AppServiceProvider.php'),
+            '        // [thronekit:pennant-boot-call]',
+            "        \$this->defineFeatureFlags();",
+        );
+
+        // Método defineFeatureFlags() + anchor para uso futuro
+        $defineMethod = <<<'PHP'
+    protected function defineFeatureFlags(): void
+    {
+        \Laravel\Pennant\Feature::define(\App\Enums\FeatureFlag::NewDashboard->value, fn (\App\Models\User $user) => $user->hasRole('superadmin'));
+    }
+PHP;
+
+        $this->patchTextFile(
+            base_path('app/Providers/AppServiceProvider.php'),
+            '    // [thronekit:pennant-methods]',
+            $defineMethod,
+        );
+
+        // Tipo features no global.d.ts
+        $this->patchTextFile(
+            base_path('resources/js/types/global.d.ts'),
+            '            // [thronekit:pennant-features-type]',
+            '',
+        );
+    }
+
+    /* ──────────────────────────────────────────────────────────────────────── */
     /*  Dependency management                                                    */
     /* ──────────────────────────────────────────────────────────────────────── */
 
@@ -319,6 +394,10 @@ PHP;
 
         if (in_array('notifications', $modules, true)) {
             $packages[] = 'laravel/reverb';
+        }
+
+        if (in_array('pennant', $modules, true)) {
+            $packages[] = 'laravel/pennant';
         }
 
         if ($packages === []) {

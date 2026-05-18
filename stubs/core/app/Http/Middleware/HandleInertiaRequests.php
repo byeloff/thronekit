@@ -61,6 +61,7 @@ class HandleInertiaRequests extends Middleware
                     ? NotificationRecipient::where('user_id', $request->user()->id)->whereNull('read_at')->count()
                     : 0
             ),
+            // [thronekit:pennant-features]
         ];
     }
 

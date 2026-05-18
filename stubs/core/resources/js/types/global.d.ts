@@ -19,6 +19,8 @@ declare module '@inertiajs/core' {
                 analytics: boolean;
                 marketing: boolean;
             } | null;
+            features: Record<string, boolean>;
+            // [thronekit:pennant-features-type]
             [key: string]: unknown;
         };
     }
