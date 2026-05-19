@@ -6,7 +6,7 @@ import { CookieConsent } from '@/components/cookie-consent';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initEcho } from '@/echo';
-// [thronekit:fingerprint-import]
+import { initFingerprint } from '@/fingerprint';
 import { initializeTheme } from '@/hooks/use-appearance';
 import { initI18n } from '@/i18n';
 import AppLayout from '@/layouts/app-layout';
@@ -74,7 +74,7 @@ function cookieConsentFromApp(app: ReactElement): CookieConsentState | null {
 // Conecta o Echo ao Reverb (WebSocket). Só roda no browser.
 if (isBrowser) {
     initEcho();
-    // [thronekit:fingerprint-init]
+    initFingerprint();
 }
 
 createInertiaApp({
