@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CookieConsentController;
 use App\Http\Controllers\Dev\ThemeEditorController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PrivacyController;
 use App\Http\Controllers\PrivacyPolicyController;
 use App\Http\Controllers\TermsController;
@@ -25,6 +27,15 @@ Route::put('cookie-consent', [CookieConsentController::class, 'store'])
 
 Route::middleware(['auth', 'verified', 'terms.accepted'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+
+    // Notificações do usuário (JSON — consumido pelo bell dropdown).
+    Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{notificationRecipient}/read', [NotificationController::class, 'read'])
+        ->middleware(['fingerprint', 'throttle:fingerprinted'])
+        ->name('notifications.read');
+    Route::post('notifications/{notificationRecipient}/action', [NotificationController::class, 'action'])
+        ->middleware(['fingerprint', 'throttle:fingerprinted'])
+        ->name('notifications.action');
 
     Route::get('settings/privacy', [PrivacyController::class, 'show'])
         ->name('settings.privacy.show');
@@ -48,15 +59,36 @@ Route::middleware(['auth', 'fingerprint'])
 
 Route::put('locale', [LocaleController::class, 'update'])->name('locale.update');
 
-// Admin — gestão de usuários e roles (apenas superadmin).
-Route::middleware(['auth', 'verified', 'role:superadmin'])
+// Admin — gestão de usuários, roles e notificações.
+Route::middleware(['auth', 'verified', 'role:superadmin|admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function (): void {
-        Route::get('users', [UserController::class, 'index'])->name('users.index');
-        Route::put('users/{user}/roles', [UserController::class, 'updateRoles'])
+        // Usuários e roles (apenas superadmin).
+        Route::middleware('role:superadmin')->group(function (): void {
+            Route::get('users', [UserController::class, 'index'])->name('users.index');
+            Route::put('users/{user}/roles', [UserController::class, 'updateRoles'])
+                ->middleware('fingerprint')
+                ->name('users.roles.update');
+        });
+
+        // Notificações (superadmin + admin).
+        Route::get('notifications', [AdminNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('notifications/create', [AdminNotificationController::class, 'create'])->name('notifications.create');
+        Route::post('notifications', [AdminNotificationController::class, 'store'])
             ->middleware('fingerprint')
-            ->name('users.roles.update');
+            ->name('notifications.store');
+        Route::get('notifications/{notification}', [AdminNotificationController::class, 'show'])->name('notifications.show');
+        Route::get('notifications/{notification}/edit', [AdminNotificationController::class, 'edit'])->name('notifications.edit');
+        Route::put('notifications/{notification}', [AdminNotificationController::class, 'update'])
+            ->middleware('fingerprint')
+            ->name('notifications.update');
+        Route::post('notifications/{notification}/dispatch', [AdminNotificationController::class, 'dispatch'])
+            ->middleware('fingerprint')
+            ->name('notifications.dispatch');
+        Route::delete('notifications/{notification}', [AdminNotificationController::class, 'destroy'])
+            ->middleware('fingerprint')
+            ->name('notifications.destroy');
     });
 
 // Download do ZIP de exportação de dados pessoais (link assinado, auth obrigatório).
@@ -71,5 +103,3 @@ if (app()->environment('local')) {
         Route::post('theme-editor', [ThemeEditorController::class, 'update'])->name('theme-editor.update');
     });
 }
-
-// [thronekit:notifications-routes]
