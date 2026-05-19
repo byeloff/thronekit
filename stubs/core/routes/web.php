@@ -31,18 +31,18 @@ Route::middleware(['auth', 'verified', 'terms.accepted'])->group(function () {
 
     // Throttle agressivo: exportação gera ZIP + envia email — 3 por hora por usuário.
     Route::post('settings/privacy/export', [PrivacyController::class, 'exportData'])
-        ->middleware('throttle:privacy-export')
+        ->middleware(['fingerprint', 'throttle:privacy-export'])
         ->name('settings.privacy.export');
 
     // Anonimização é irreversível — 5 tentativas por hora por IP.
     Route::delete('settings/privacy', [PrivacyController::class, 'destroy'])
-        ->middleware('throttle:privacy-destroy')
+        ->middleware(['fingerprint', 'throttle:privacy-destroy'])
         ->name('settings.privacy.destroy');
 });
 
 // Aceite de termos: o middleware exclui esta rota — deve ser acessível por
 // usuário autenticado pendente de aceite.
-Route::middleware(['auth'])
+Route::middleware(['auth', 'fingerprint'])
     ->post('terms/accept', [TermsController::class, 'accept'])
     ->name('terms.accept');
 
@@ -54,8 +54,13 @@ Route::middleware(['auth', 'verified', 'role:superadmin'])
     ->name('admin.')
     ->group(function (): void {
         Route::get('users', [UserController::class, 'index'])->name('users.index');
-        Route::put('users/{user}/roles', [UserController::class, 'updateRoles'])->name('users.roles.update');
+        Route::put('users/{user}/roles', [UserController::class, 'updateRoles'])
+            ->middleware('fingerprint')
+            ->name('users.roles.update');
     });
+
+// Download do ZIP de exportação de dados pessoais (link assinado, auth obrigatório).
+Route::personalDataExports('personal-data-exports');
 
 require __DIR__.'/settings.php';
 

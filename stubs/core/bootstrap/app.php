@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureTermsAccepted;
+use App\Http\Middleware\FingerprintMiddleware;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\Localization;
@@ -41,7 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
             'terms.accepted' => EnsureTermsAccepted::class,
-            // [thronekit:fingerprint-middleware]
+            'fingerprint' => FingerprintMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

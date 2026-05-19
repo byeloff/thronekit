@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Listeners\AuthActivitySubscriber;
+use App\Services\Support\FingerprintService;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -20,21 +23,26 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // [thronekit:fingerprint-singleton]
+        $this->app->singleton(FingerprintService::class);
     }
 
     public function boot(): void
     {
         $this->configureDefaults();
         $this->configureRateLimiters();
-        // [thronekit:event-subscribers]
+        $this->registerEventSubscribers();
         $this->configureInertiaErrors();
         // [thronekit:pennant-boot-call]
     }
 
     protected function configureRateLimiters(): void
     {
-        // [thronekit:fingerprint-limiter]
+        RateLimiter::for('fingerprinted', function (Request $request): Limit {
+            $key = (string) ($request->attributes->get('fingerprint_key') ?? $request->ip());
+            $limit = app()->isProduction() ? 60 : 300;
+
+            return Limit::perMinute($limit)->by($key.'|'.$request->ip());
+        });
 
         // Exportação de dados pessoais: pesada (ZIP + email) → 3 por hora por usuário.
         RateLimiter::for('privacy-export', fn (Request $request) => Limit::perHour(3)
@@ -45,6 +53,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('privacy-destroy', fn (Request $request) => Limit::perHour(5)
             ->by($request->user()?->id ?: $request->ip())
         );
+    }
+
+    protected function registerEventSubscribers(): void
+    {
+        Event::subscribe(AuthActivitySubscriber::class);
     }
 
     protected function configureInertiaErrors(): void
