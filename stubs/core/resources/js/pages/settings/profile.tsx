@@ -1,8 +1,11 @@
-import { Form, Head, Link, setLayoutProps, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, setLayoutProps, usePage } from '@inertiajs/react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import ProfileAvatarController from '@/actions/App/Http/Controllers/Settings/ProfileAvatarController';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +21,35 @@ export default function Profile({
 }) {
     const { t } = useTranslation();
     const { auth } = usePage().props;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        router.post(
+            ProfileAvatarController.store.url(),
+            { avatar: file },
+            { forceFormData: true, preserveScroll: true },
+        );
+        e.target.value = '';
+    }
+
+    function handleAvatarRemove() {
+        router.delete(ProfileAvatarController.destroy.url(), {
+            preserveScroll: true,
+        });
+    }
+
+    const initials = auth.user.name
+        .split(' ')
+        .slice(0, 2)
+        .map((w: string) => w[0])
+        .join('')
+        .toUpperCase();
 
     setLayoutProps({
         breadcrumbs: [
@@ -40,6 +72,51 @@ export default function Profile({
                     title={t('settings.profile.section_title')}
                     description={t('settings.profile.section_description')}
                 />
+
+                <div className="flex items-center gap-4">
+                    <Avatar className="size-20">
+                        <AvatarImage
+                            src={auth.user.avatar}
+                            alt={auth.user.name}
+                        />
+                        <AvatarFallback className="text-lg">
+                            {initials}
+                        </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm font-medium">
+                            {t('settings.profile.avatar_label')}
+                        </p>
+                        <div className="flex gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                {t('settings.profile.avatar_change')}
+                            </Button>
+                            {auth.user.avatar && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleAvatarRemove}
+                                >
+                                    {t('settings.profile.avatar_remove')}
+                                </Button>
+                            )}
+                        </div>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={handleAvatarChange}
+                        />
+                    </div>
+                </div>
 
                 <Form
                     {...ProfileController.update.form()}

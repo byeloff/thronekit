@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\ProfileAvatarController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,14 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('settings/profile/avatar', [ProfileAvatarController::class, 'store'])
+        ->middleware(['fingerprint', 'throttle:10,1'])
+        ->name('profile.avatar.store');
+
+    Route::delete('settings/profile/avatar', [ProfileAvatarController::class, 'destroy'])
+        ->middleware('fingerprint')
+        ->name('profile.avatar.destroy');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])->name('security.edit');
 

@@ -1,21 +1,25 @@
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import { PasswordStrength } from '@/components/password-strength';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import type { PasswordPolicy } from '@/hooks/use-password-strength';
 import { update } from '@/routes/password';
 
 type Props = {
     token: string;
     email: string;
-    passwordRules: string;
+    passwordPolicy: PasswordPolicy;
 };
 
-export default function ResetPassword({ token, email, passwordRules }: Props) {
+export default function ResetPassword({ token, email, passwordPolicy }: Props) {
     const { t } = useTranslation();
+    const [password, setPassword] = useState('');
 
     setLayoutProps({
         title: t('auth.reset_password.title'),
@@ -65,8 +69,10 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                                 placeholder={t(
                                     'auth.reset_password.password_placeholder',
                                 )}
-                                passwordrules={passwordRules}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                             />
+                            <PasswordStrength value={password} policy={passwordPolicy} />
                             <InputError message={errors.password} />
                         </div>
 
@@ -82,7 +88,6 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
                                 placeholder={t(
                                     'auth.reset_password.confirm_password_placeholder',
                                 )}
-                                passwordrules={passwordRules}
                             />
                             <InputError
                                 message={errors.password_confirmation}

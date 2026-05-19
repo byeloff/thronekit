@@ -6,10 +6,12 @@ import SecurityController from '@/actions/App/Http/Controllers/Settings/Security
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import { PasswordStrength } from '@/components/password-strength';
 import TwoFactorRecoveryCodes from '@/components/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/two-factor-setup-modal';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import type { PasswordPolicy } from '@/hooks/use-password-strength';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
 import { edit } from '@/routes/security';
 import { disable, enable } from '@/routes/two-factor';
@@ -18,18 +20,19 @@ type Props = {
     canManageTwoFactor?: boolean;
     requiresConfirmation?: boolean;
     twoFactorEnabled?: boolean;
-    passwordRules: string;
+    passwordPolicy: PasswordPolicy;
 };
 
 export default function Security({
     canManageTwoFactor = false,
     requiresConfirmation = false,
     twoFactorEnabled = false,
-    passwordRules,
+    passwordPolicy,
 }: Props) {
     const { t } = useTranslation();
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
+    const [newPassword, setNewPassword] = useState('');
 
     const {
         qrCodeSvg,
@@ -86,6 +89,7 @@ export default function Security({
                         'current_password',
                     ]}
                     resetOnSuccess
+                    onSuccess={() => setNewPassword('')}
                     onError={(errors) => {
                         if (errors.password) {
                             passwordInput.current?.focus();
@@ -132,9 +136,11 @@ export default function Security({
                                     placeholder={t(
                                         'settings.security.new_password_placeholder',
                                     )}
-                                    passwordrules={passwordRules}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
                                 />
 
+                                <PasswordStrength value={newPassword} policy={passwordPolicy} />
                                 <InputError message={errors.password} />
                             </div>
 
@@ -151,7 +157,6 @@ export default function Security({
                                     placeholder={t(
                                         'settings.security.confirm_password_placeholder',
                                     )}
-                                    passwordrules={passwordRules}
                                 />
 
                                 <InputError
