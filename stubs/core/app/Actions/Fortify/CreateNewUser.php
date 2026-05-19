@@ -7,6 +7,7 @@ namespace App\Actions\Fortify;
 use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use App\Models\User;
+use App\Services\Compliance\TermsService;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
@@ -15,7 +16,9 @@ class CreateNewUser implements CreatesNewUsers
     use PasswordValidationRules;
     use ProfileValidationRules;
 
-    // [thronekit:terms-constructor]
+    public function __construct(
+        private readonly TermsService $terms,
+    ) {}
 
     /**
      * Validate and create a newly registered user.
@@ -38,7 +41,9 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $input['password'],
         ]);
 
-        // [thronekit:terms-accept]
+        if ($request = request()) {
+            $this->terms->accept($user, $request);
+        }
 
         return $user;
     }

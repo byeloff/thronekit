@@ -4,47 +4,34 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Listeners\AuthActivitySubscriber;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use App\Support\PasswordPolicy;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
 use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         // [thronekit:fingerprint-singleton]
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         $this->configureDefaults();
         $this->configureRateLimiters();
-        $this->registerEventSubscribers();
+        // [thronekit:event-subscribers]
         $this->configureInertiaErrors();
         // [thronekit:pennant-boot-call]
     }
 
-    /**
-     * Subscribers de eventos da aplicação. Centralizado aqui para evitar
-     * espalhar Event::listen() pelo codebase.
-     */
     protected function configureRateLimiters(): void
     {
         // [thronekit:fingerprint-limiter]
@@ -58,11 +45,6 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('privacy-destroy', fn (Request $request) => Limit::perHour(5)
             ->by($request->user()?->id ?: $request->ip())
         );
-    }
-
-    protected function registerEventSubscribers(): void
-    {
-        Event::subscribe(AuthActivitySubscriber::class);
     }
 
     protected function configureInertiaErrors(): void
@@ -80,9 +62,6 @@ class AppServiceProvider extends ServiceProvider
 
     // [thronekit:pennant-methods]
 
-    /**
-     * Configure default behaviors for production-ready applications.
-     */
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
@@ -96,9 +75,7 @@ class AppServiceProvider extends ServiceProvider
             throw new \RuntimeException('SESSION_ENCRYPT must be true in production (LGPD/GDPR requirement).');
         }
 
-        DB::prohibitDestructiveCommands(
-            app()->isProduction(),
-        );
+        DB::prohibitDestructiveCommands(app()->isProduction());
 
         /** @var array{min_length: int, require_mixed_case: bool, require_numbers: bool, require_symbols: bool, uncompromised: bool} $policy */
         $policy = config('password');
