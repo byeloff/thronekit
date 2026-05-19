@@ -477,5 +477,16 @@
         "sound_toggle": "Sonido",
         "sound_on": "Sonido activado",
         "sound_off": "Sonido desactivado"
+    },
+    "password_strength": {
+        "very_weak": "Muy débil",
+        "weak": "Débil",
+        "fair": "Regular",
+        "good": "Buena",
+        "strong": "Fuerte",
+        "min_length": "Mínimo {{count}} caracteres",
+        "mixed_case": "Letras mayúsculas y minúsculas",
+        "numbers": "Al menos un número",
+        "symbols": "Al menos un carácter especial"
     }
 }

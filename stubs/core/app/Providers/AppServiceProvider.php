@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use App\Support\PasswordPolicy;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
 use Inertia\Inertia;
@@ -99,14 +100,27 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        /** @var array{min_length: int, require_mixed_case: bool, require_numbers: bool, require_symbols: bool, uncompromised: bool} $policy */
+        $policy = config('password');
+
+        $rule = Password::min($policy['min_length']);
+
+        if ($policy['require_mixed_case']) {
+            $rule->mixedCase();
+        }
+
+        if ($policy['require_numbers']) {
+            $rule->numbers();
+        }
+
+        if ($policy['require_symbols']) {
+            $rule->symbols();
+        }
+
+        if ($policy['uncompromised']) {
+            $rule->uncompromised();
+        }
+
+        Password::defaults($rule);
     }
 }

@@ -1,22 +1,26 @@
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import { PasswordStrength } from '@/components/password-strength';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import type { PasswordPolicy } from '@/hooks/use-password-strength';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
 
 type Props = {
-    passwordRules: string;
+    passwordPolicy: PasswordPolicy;
 };
 
-export default function Register({ passwordRules }: Props) {
+export default function Register({ passwordPolicy }: Props) {
     const { t } = useTranslation();
+    const [password, setPassword] = useState('');
 
     setLayoutProps({
         title: t('auth.register.title'),
@@ -88,8 +92,10 @@ export default function Register({ passwordRules }: Props) {
                                     placeholder={t(
                                         'auth.register.password_placeholder',
                                     )}
-                                    passwordrules={passwordRules}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                 />
+                                <PasswordStrength value={password} policy={passwordPolicy} />
                                 <InputError message={errors.password} />
                             </div>
 
@@ -106,7 +112,6 @@ export default function Register({ passwordRules }: Props) {
                                     placeholder={t(
                                         'auth.register.confirm_password_placeholder',
                                     )}
-                                    passwordrules={passwordRules}
                                 />
                                 <InputError
                                     message={errors.password_confirmation}
