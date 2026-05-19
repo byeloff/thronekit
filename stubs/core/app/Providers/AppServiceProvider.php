@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Enums\FeatureFlag;
 use App\Listeners\AuthActivitySubscriber;
+use App\Models\User;
 use App\Services\Support\FingerprintService;
 use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -18,6 +20,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\ExceptionResponse;
 use Inertia\Inertia;
+use Laravel\Pennant\Feature;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,7 +35,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureRateLimiters();
         $this->registerEventSubscribers();
         $this->configureInertiaErrors();
-        // [thronekit:pennant-boot-call]
+        $this->defineFeatureFlags();
     }
 
     protected function configureRateLimiters(): void
@@ -73,7 +76,10 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    // [thronekit:pennant-methods]
+    protected function defineFeatureFlags(): void
+    {
+        Feature::define(FeatureFlag::NewDashboard->value, fn (User $user) => $user->hasRole('superadmin'));
+    }
 
     protected function configureDefaults(): void
     {

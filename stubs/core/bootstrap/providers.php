@@ -2,10 +2,12 @@
 
 use App\Providers\AppServiceProvider;
 use App\Providers\FortifyServiceProvider;
+use App\Providers\HealthServiceProvider;
+use App\Providers\HorizonServiceProvider;
 
 return [
     AppServiceProvider::class,
     FortifyServiceProvider::class,
-    // [thronekit:health-provider]
-    // [thronekit:horizon-provider]
+    HealthServiceProvider::class,
+    HorizonServiceProvider::class,
 ];

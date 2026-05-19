@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\FeatureFlagController as AdminFeatureFlagController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CookieConsentController;
@@ -70,6 +71,15 @@ Route::middleware(['auth', 'verified', 'role:superadmin|admin'])
             Route::put('users/{user}/roles', [UserController::class, 'updateRoles'])
                 ->middleware('fingerprint')
                 ->name('users.roles.update');
+
+            // Feature flags.
+            Route::get('feature-flags', [AdminFeatureFlagController::class, 'index'])->name('feature-flags.index');
+            Route::patch('feature-flags/{flag}', [AdminFeatureFlagController::class, 'update'])
+                ->middleware('fingerprint')
+                ->name('feature-flags.update');
+            Route::patch('feature-flags/{flag}/users/{user}', [AdminFeatureFlagController::class, 'updateUser'])
+                ->middleware('fingerprint')
+                ->name('feature-flags.users.update');
         });
 
         // Notificações (superadmin + admin).
@@ -90,6 +100,13 @@ Route::middleware(['auth', 'verified', 'role:superadmin|admin'])
             ->middleware('fingerprint')
             ->name('notifications.destroy');
     });
+
+// Health check JSON — restrito a superadmin; use /up para ping público.
+use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
+
+Route::middleware(['auth', 'can:viewHorizon'])
+    ->get('health', HealthCheckJsonResultsController::class)
+    ->name('health');
 
 // Download do ZIP de exportação de dados pessoais (link assinado, auth obrigatório).
 Route::personalDataExports('personal-data-exports');
