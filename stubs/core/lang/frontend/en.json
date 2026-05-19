@@ -248,7 +248,15 @@
         "title": "Terms and Conditions",
         "version": "Version {{version}}",
         "no_terms": "No version has been published yet.",
-        "accept_button": "Accept terms"
+        "accept_button": "Accept terms",
+        "acceptance": {
+            "title": "You have already accepted these terms",
+            "description": "Your acceptance details have been recorded as required by LGPD/GDPR.",
+            "accepted_at": "Accepted at",
+            "ip": "IP address",
+            "user_agent": "Browser / device",
+            "fingerprint": "Session fingerprint"
+        }
     },
     "nav": {
         "platform": "Platform",

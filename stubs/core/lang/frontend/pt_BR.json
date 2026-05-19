@@ -248,7 +248,15 @@
         "title": "Termos e Condições",
         "version": "Versão {{version}}",
         "no_terms": "Nenhuma versão publicada ainda.",
-        "accept_button": "Aceitar os termos"
+        "accept_button": "Aceitar os termos",
+        "acceptance": {
+            "title": "Você já aceitou estes termos",
+            "description": "Seus dados de aceite foram registrados conforme exigido pela LGPD/GDPR.",
+            "accepted_at": "Data de aceite",
+            "ip": "Endereço IP",
+            "user_agent": "Navegador / dispositivo",
+            "fingerprint": "Fingerprint da sessão"
+        }
     },
     "nav": {
         "platform": "Plataforma",
